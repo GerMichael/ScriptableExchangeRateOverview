@@ -4,7 +4,7 @@ const targetCur = "EUR"
 
 const tradingDays = 20
 const minLookback = tradingDays
-const maxLookback = tradingDays * 2
+const maxLookback = tradingDays * 3
 
 const keyName = "ratesexchange.eu_api_key"
 
@@ -47,6 +47,10 @@ function historyUrl(date) {
          `&currencies=${targetCur}`
 }
 
+function daysBetween(a, b) {
+  return Math.floor((a - b) / (24 * 60 * 60 * 1000))
+}
+
 async function safeFetch(url) {
   try {
     const r = new Request(url)
@@ -60,23 +64,14 @@ async function safeFetch(url) {
 // ================= CACHE HELPERS =================
 function loadCache() {
   if (!fm.fileExists(CACHE_FILE)) {
-    return {
-      base: baseCur,
-      target: targetCur,
-      horizon: minLookback,
-      data: {}
-    }
+    return { base: baseCur, target: targetCur, data: {} }
   }
   try {
     console.log(`try to load from cache file ${CACHE_FILE}`)
-    return JSON.parse(fm.readString(CACHE_FILE))
+    const cache = JSON.parse(fm.readString(CACHE_FILE))
+    return { base: cache.base, target: cache.target, data: cache.data }
   } catch {
-    return {
-      base: baseCur,
-      target: targetCur,
-      horizon: minLookback,
-      data: {}
-    }
+    return { base: baseCur, target: targetCur, data: {} }
   }
 }
 
@@ -95,31 +90,44 @@ async function loadTradingDays(n) {
     cache.base = baseCur
     cache.target = targetCur
     cache.data = {}
-    cache.horizon = minLookback
   }
 
-  // ⬆️ HORIZONT ERHÖHEN
-  cache.horizon = Math.min(
-    (cache.horizon || minLookback) + 1,
-    maxLookback
-  )
+  // ================= HORIZONT ABLEITEN =================
+  let horizon = minLookback
 
-  console.log(`Using horizon = ${cache.horizon} days`)
+  const cachedDates = Object.keys(cache.data)
+  if (cachedDates.length > 0) {
+    const oldest = cachedDates.reduce((a, b) => a < b ? a : b)
+    horizon = daysBetween(today, new Date(oldest)) + 1
+    horizon = Math.max(horizon, minLookback)
+    horizon = Math.min(horizon, maxLookback)
+  }
 
+  console.log(`Using horizon = ${horizon} days`)
+
+  // ================= KALENDERTAGE =================
   const calendarDates = []
-
-  for (let i = 0; i < cache.horizon; i++) {
+  for (let i = 0; i < horizon; i++) {
     const d = new Date(today)
     d.setDate(today.getDate() - i)
     calendarDates.push(dateStr(d))
   }
 
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+
   // Fehlende Tage (null zählt als vorhanden!)
   const missingDates = calendarDates.filter(
-    d => !(d in cache.data)
+    d => (
+      !(d in cache.data)
+      || (cache.data[d] == null && d == dateStr(today))
+      || (cache.data[d] == null && d == dateStr(yesterday))
+    )
   )
 
-  // Parallel laden
+  console.log(`Missing dates: ${missingDates}`)
+
+  // ================= API LOAD =================
   const fetched = await Promise.all(
     missingDates.map(async d => {
       console.log(`loading rate for date ${d}`)
@@ -135,9 +143,9 @@ async function loadTradingDays(n) {
     cache.data[r.date] = r.rate
   })
 
-  // Cache-Bereinigung (nur Kalendertage!)
+  // ================= CACHE CLEANUP =================
   const cutoffDate = new Date(today)
-  cutoffDate.setDate(today.getDate() - cache.horizon + 1)
+  cutoffDate.setDate(today.getDate() - horizon + 1)
   const cutoff = dateStr(cutoffDate)
 
   for (const d of Object.keys(cache.data)) {
@@ -148,7 +156,7 @@ async function loadTradingDays(n) {
 
   saveCache(cache)
 
-  // Nur echte Börsentage zurückgeben
+  // ================= TRADING DAYS =================
   const tradingDates = Object.keys(cache.data)
     .filter(d => cache.data[d] !== null)
     .sort((a, b) => new Date(a) - new Date(b))
