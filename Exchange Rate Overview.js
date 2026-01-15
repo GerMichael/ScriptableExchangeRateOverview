@@ -200,24 +200,31 @@ w.addSpacer(6)
 
 // ================= CHART =================
 let widgetDim = [200, 80]
-console.log(config)
 switch(config.widgetFamily){
   case "small":
-    widgetDim = [200, 80]
+    widgetDim = [200, 80];
+    break;
   case "medium":
-    widgetDim = [800, 160]
+    widgetDim = [800, 160];
+    break;
   case "large":
-    widgetDim = [800, 320]
+    widgetDim = [800, 320];
+    break;
   case "extraLarge":
-    widgetDim = [800, 320]
+    widgetDim = [800, 320];
+    break;
   case "accessoryRectangular": 
-    widgetDim = [400, 80]
+    widgetDim = [600, 100];
+    break;
   case "accessoryInline":
-    widgetDim = [160, 80]
+    widgetDim = [160, 80];
+    break;
   case "accessoryCircular":
-    widgetDim = [160, 80]
+    widgetDim = [160, 80];
+    break;
   case null:
-    widgetDim = [200, 80]
+    widgetDim = [200, 80];
+    break;
 }
 const [width, height] = widgetDim
 
