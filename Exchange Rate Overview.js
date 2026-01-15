@@ -199,8 +199,27 @@ value.textColor = pct >= 0 ? Color.green() : Color.red()
 w.addSpacer(6)
 
 // ================= CHART =================
-const width = 200
-const height = 80
+let widgetDim = [200, 80]
+console.log(config)
+switch(config.widgetFamily){
+  case "small":
+    widgetDim = [200, 80]
+  case "medium":
+    widgetDim = [800, 160]
+  case "large":
+    widgetDim = [800, 320]
+  case "extraLarge":
+    widgetDim = [800, 320]
+  case "accessoryRectangular": 
+    widgetDim = [400, 80]
+  case "accessoryInline":
+    widgetDim = [160, 80]
+  case "accessoryCircular":
+    widgetDim = [160, 80]
+  case null:
+    widgetDim = [200, 80]
+}
+const [width, height] = widgetDim
 
 const min = Math.min(...rates)
 const max = Math.max(...rates)
