@@ -144,8 +144,9 @@ async function loadTradingDays(n) {
   })
 
   // ================= CACHE CLEANUP =================
+  // WICHTIG: Cache nur auf MAX-Horizont begrenzen
   const cutoffDate = new Date(today)
-  cutoffDate.setDate(today.getDate() - horizon + 1)
+  cutoffDate.setDate(today.getDate() - maxLookback + 1)
   const cutoff = dateStr(cutoffDate)
 
   for (const d of Object.keys(cache.data)) {
@@ -161,9 +162,7 @@ async function loadTradingDays(n) {
     .filter(d => cache.data[d] !== null)
     .sort((a, b) => new Date(a) - new Date(b))
 
-  const recent = tradingDates.slice(-n - 1)
-
-  return recent.map(d => ({
+  return tradingDates.map(d => ({
     date: d,
     rate: cache.data[d]
   }))
